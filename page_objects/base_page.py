@@ -1,6 +1,11 @@
 import allure
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common import NoSuchElementException, TimeoutException
+from selenium.common import (
+    NoSuchElementException,
+    TimeoutException,
+    WebDriverException,
+    InvalidArgumentException,
+)
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.common.action_chains import ActionChains
 import time
@@ -15,7 +20,16 @@ class BasePage:
 
     def open_page(self):
         self.logger.info("| Class: %s | Opening url: %s" % (self.class_name, self.url))
-        self.browser.get(url=self.url)
+        try:
+            self.browser.get(url=self.url)
+        except (TimeoutException, WebDriverException, InvalidArgumentException) as e:
+            allure.attach(
+                body=self.browser.get_screenshot_as_png(),
+                name="screenshot.png",
+                attachment_type=allure.attachment_type.PNG,
+            )
+            self.logger.error(f"Failed to open page {self.url}: {e}")
+            raise AssertionError(f"Error is {e} during opening {self.url}")
 
     def is_element_present(self, locator: tuple):
         self.logger.info(
@@ -26,12 +40,15 @@ class BasePage:
         )
         try:
             return self.browser.find_element(*locator)
-        except NoSuchElementException:
+        except NoSuchElementException as e:
             # self.browser.save_screenshot(f"{self.browser.session_id}.png")
             allure.attach(
                 body=self.browser.get_screenshot_as_png(),
                 name="screenshot.png",
                 attachment_type=allure.attachment_type.PNG,
+            )
+            self.logger.error(
+                f"Element with locator:{locator} is absent on pade {self.browser.current_url}, error: {e}"
             )
             raise AssertionError(
                 f"Element with locator:{locator} is absent on pade {self.browser.current_url}"
@@ -47,12 +64,14 @@ class BasePage:
         for locator in elements:
             try:
                 self.browser.find_element(*locator)
-            except NoSuchElementException:
-                # self.browser.save_screenshot(f"{self.browser.session_id}.png")
+            except NoSuchElementException as e:
                 allure.attach(
                     body=self.browser.get_screenshot_as_png(),
                     name=f"{self.browser.session_id}.png",
                     attachment_type=allure.attachment_type.PNG,
+                )
+                self.logger.error(
+                    f"Element with locator:{locator} is absent on pade {self.browser.current_url}, error: {e}"
                 )
                 raise AssertionError(
                     f"Element with locator:{locator} is absent on pade {self.browser.current_url}"
@@ -66,7 +85,15 @@ class BasePage:
         )
         try:
             return WebDriverWait(self.browser, timeout).until(EC.title_contains(title))
-        except TimeoutException:
+        except TimeoutException as e:
+            allure.attach(
+                body=self.browser.get_screenshot_as_png(),
+                name=f"{self.browser.session_id}.png",
+                attachment_type=allure.attachment_type.PNG,
+            )
+            self.logger.error(
+                f"Expected title is {title}, but title is {self.browser.title}, error: {e}"
+            )
             raise AssertionError(
                 f"Expected title is {title}, but title is {self.browser.title}"
             )
@@ -80,13 +107,14 @@ class BasePage:
             return WebDriverWait(self.browser, timeout).until(
                 EC.visibility_of_element_located(locator)
             )
-        except TimeoutException:
+        except TimeoutException as e:
             self.browser.save_screenshot(f"{self.browser.session_id}.png")
             allure.attach(
                 body=self.browser.get_screenshot_as_png(),
                 name=f"{self.browser.session_id}.png",
                 attachment_type=allure.attachment_type.PNG,
             )
+            self.logger.error(f"Didn't wait for: {locator}, error: {e}")
             raise AssertionError(f"Didn't wait for: {locator}")
 
     def wait_text(self, locator, text, timeout=10):
@@ -98,7 +126,15 @@ class BasePage:
             WebDriverWait(self.browser, timeout).until(
                 EC.text_to_be_present_in_element(locator, text)
             )
-        except TimeoutException:
+        except TimeoutException as e:
+            allure.attach(
+                body=self.browser.get_screenshot_as_png(),
+                name=f"{self.browser.session_id}.png",
+                attachment_type=allure.attachment_type.PNG,
+            )
+            self.logger.error(
+                f"Didn't wait for text: {text} in locator: {locator}, error: {e}"
+            )
             raise AssertionError(f"Didn't wait for text: {text} in locator: {locator}")
 
     def input_value_to_field(self, locator: tuple, key_value: str):
@@ -118,6 +154,21 @@ class BasePage:
                 name=f"{self.browser.session_id}.png",
                 attachment_type=allure.attachment_type.PNG,
             )
+            self.logger.error(f"Error during click on {locator}, error: {e}")
+            raise AssertionError(f"Error during click on {locator}")
+
+    def get_text(self, locator: tuple):
+        self.logger.debug("Get text from element: %s" % str(locator))
+        try:
+            return self.browser.find_element(*locator).text
+        except Exception as e:
+            self.logger.error(f"Error: {e} during getting text from element {locator}")
+            allure.attach(
+                body=self.browser.get_screenshot_as_png(),
+                name=f"{self.browser.session_id}.png",
+                attachment_type=allure.attachment_type.PNG,
+            )
+            raise AssertionError(f"Error during getting text from {locator}")
 
     def action_chains_click(self, locator: tuple):
         self.logger.debug("ActionChains.move_to_element.click to %s" % str(locator))
@@ -127,10 +178,6 @@ class BasePage:
         ActionChains(self.browser).move_to_element(element).pause(1).click().pause(
             1
         ).perform()
-
-    def get_text(self, locator: tuple):
-        self.logger.debug("Get text from element: %s" % str(locator))
-        return self.browser.find_element(*locator).text
 
     def scroll_to_element(self, locator: tuple):
         self.logger.debug("Scroll to element: %s" % str(locator))

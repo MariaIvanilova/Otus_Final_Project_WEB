@@ -8,7 +8,8 @@ from element_objects.header import HeaderElement
 
 
 class MainPage(BasePage):
-    LOGO = (By.ID, "logo")
+    # LOGO = (By.ID, "logo")
+    LOGO = (By.ID, "logo_error")    # неправильный локатор, для демонстрирования снятия скриншотов в Allure
     MENU = (By.ID, "menu")
     CAROUSEL_UPPER = (By.CSS_SELECTOR, "#carousel-banner-0.slide")
     CAROUSEL_LOWER = (By.CSS_SELECTOR, "#carousel-banner-1.slide")

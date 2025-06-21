@@ -146,6 +146,7 @@ def url(request):
 #     yield connection
 #     connection.close()
 
+
 @pytest.fixture(scope="session")
 def db_connection(request):
     db_host = request.config.getoption("db_host")

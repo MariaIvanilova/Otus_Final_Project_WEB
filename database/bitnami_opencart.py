@@ -1,24 +1,8 @@
 from datetime import datetime
 
+import allure
+
 from database.db import OpenCartDB
-# from database.connection import connection_bitnami
-
-
-def show_all_tables(db_connection):
-    data_base = OpenCartDB(db_connection)
-    try:
-        data_base.show_all_tables()
-    except Exception as e:
-        print(f"Error occurred: {e}")
-
-
-def print_table(table, db_connection):
-    data_base = OpenCartDB(db_connection)
-    try:
-        data_base.print_select_all_from_table(table)
-    except Exception as e:
-        print(f"Error occurred: {e}")
-
 
 MODEL = "test_model_1"
 NAME = "test_1"
@@ -70,6 +54,7 @@ PRODUCT_DESCRIPTION_DATA = {
 }
 
 
+@allure.step("Добавление продукта в базу данных")
 def add_product(db_connection):
     data_base = OpenCartDB(db_connection)
     try:
@@ -78,6 +63,7 @@ def add_product(db_connection):
         print(f"Error deleting product: {e}")
 
 
+@allure.step("Удаление продукта из базы данных")
 def delete_product(db_connection):
     data_base = OpenCartDB(db_connection)
     try:
@@ -93,6 +79,7 @@ def delete_product(db_connection):
         print(f"Error deleting product: {e}")
 
 
+@allure.step("Удаление customers из базы данных")
 def delete_customer_by_email(db_connection, email_field):
     data_base = OpenCartDB(db_connection)
     try:
@@ -100,4 +87,3 @@ def delete_customer_by_email(db_connection, email_field):
 
     except Exception as e:
         print(f"Error deleting customers: {e}")
-

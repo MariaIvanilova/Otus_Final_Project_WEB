@@ -82,19 +82,49 @@ $env:PHPADMIN_PORT=8888; $env:OPENCART_PORT=8085; $env:LOCAL_IP="192.168.100.9";
 Передать переменную - $env:THREADS=4;  либо поменять в docker-compose.yml в environment
 
 ### - Для запуска в Jenkins:
-Создать параметр: THREADS - Number of parallel test threads
+Создать параметры:
+
+OPENCART_HOST
+
+BROWSER
+
+BROWSER_VERSION
+
+EXECUTOR_URL
+
+THREADS - Number of parallel test threads
+
+#### Pipeline job:
+ - Используйте  Jenkinsfile
 
 #### Freestyle job:
 
 ```
-docker build -t tests_api . 
+# Очистка предыдущих Allure-результатов
+rm -rf allure-results
 
-docker run --name testing -e THREADS tests_api -n "$THREADS"
+# Запуск инфраструктуры
+PHPADMIN_PORT=8888 OPENCART_PORT=8085 LOCAL_IP=192.168.100.9 docker compose up -d mariadb opencart
 
+until docker ps | grep mariadb; do sleep 3; done
+until docker ps | grep opencart; do sleep 3; done
+
+sleep 10
+
+# Запуск тестов
+docker build -t tests_opencart .
+docker run --name testing \
+  -e OPENCART_HOST="$OPENCART_HOST" \
+  -e BROWSER="$BROWSER" \
+  -e BROWSER_VERSION="$BROWSER_VERSION" \
+  -e EXECUTOR_URL="$EXECUTOR_URL" \
+  -e THREADS="$THREADS" \
+  tests_opencart \
+  --url "$OPENCART_HOST" --browser "$BROWSER" --bv "$BROWSER_VERSION" --executor "$EXECUTOR_URL" -n "$THREADS"
+  
 docker cp testing:/app/allure-results . 
-
 docker rm testing
-```
 
-#### Pipeline job:
- - Используйте  Jenkinsfile
+# Остановка контейнеров
+docker compose down --remove-orphans --timeout 2
+```
