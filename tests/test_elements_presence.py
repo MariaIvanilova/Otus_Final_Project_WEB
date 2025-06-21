@@ -1,4 +1,5 @@
 import allure
+import pytest
 
 from page_objects.main_page import MainPage
 from page_objects.catalog_page import CatalogPage
@@ -7,6 +8,7 @@ from page_objects.administration_page import AdministrationPage
 from page_objects.registration_page import RegistrationPage
 
 
+@pytest.xfail("Зафейлено, чтобы проверить снятие скриншотов в allure")
 @allure.title("Проверка наличия элементов на главной странице -  Main")
 def test_main_page_elements(browser, url):
     main_page = MainPage(browser, url)
